@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmployeeController;
+use App\Http\Controllers\Api\PayrollPeriodController;
 use App\Http\Controllers\Api\SalaryCategoryController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:owner,head')->group(function () {
         Route::apiResource('employees', EmployeeController::class);
         Route::get('employees/{employee}/salary-history', [EmployeeController::class, 'salaryHistory']);
+    });
+
+    // Payroll Periods — Owner & Kepala Toko
+    Route::middleware('role:owner,head')->group(function () {
+        Route::apiResource('payroll-periods', PayrollPeriodController::class);
+        Route::put('payroll-periods/{payroll_period}/close',  [PayrollPeriodController::class, 'close']);
+        Route::put('payroll-periods/{payroll_period}/reopen', [PayrollPeriodController::class, 'reopen']);
     });
 
 });

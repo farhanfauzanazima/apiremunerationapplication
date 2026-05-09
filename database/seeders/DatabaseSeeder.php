@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             SalaryCategorySeeder::class,
             EmployeeSeeder::class,
+            PayrollPeriodSeeder::class,
         ]);
     }
 }
