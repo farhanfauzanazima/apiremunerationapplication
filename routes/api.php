@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\SalaryCategoryController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +24,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Salary Categories — hanya Owner
     Route::middleware('role:owner')->group(function () {
         Route::apiResource('salary-categories', SalaryCategoryController::class);
+    });
+
+    // Employees — Owner & Kepala Toko
+    Route::middleware('role:owner,head')->group(function () {
+        Route::apiResource('employees', EmployeeController::class);
+        Route::get('employees/{employee}/salary-history', [EmployeeController::class, 'salaryHistory']);
     });
 
 });

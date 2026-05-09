@@ -97,12 +97,12 @@ class SalaryCategoryController extends Controller
     public function destroy(SalaryCategory $salary_category): JsonResponse
     {
         // Cek apakah kategori sedang digunakan oleh karyawan
-        // if ($salary_category->employees()->count() > 0) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Kategori tidak dapat dihapus karena sedang digunakan oleh karyawan.',
-        //     ], 422);
-        // }
+        if ($salary_category->employees()->count() > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kategori tidak dapat dihapus karena sedang digunakan oleh karyawan.',
+            ], 422);
+        }
 
         $salary_category->delete();
 
