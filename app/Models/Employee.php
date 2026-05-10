@@ -37,8 +37,8 @@ class Employee extends Model
     }
 
     // Relasi ke SalarySlip (akan digunakan di sesi berikutnya)
-    // public function salarySlips()
-    // {
-    //     return $this->hasMany(SalarySlip::class, 'employee_id');
-    // }
+    public function salarySlips()
+    {
+        return $this->hasMany(SalarySlip::class, 'employee_id');
+    }
 }

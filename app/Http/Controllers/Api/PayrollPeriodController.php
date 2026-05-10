@@ -136,12 +136,12 @@ class PayrollPeriodController extends Controller
         }
 
         // Akan diaktifkan kembali setelah Sesi 6 (salary_slips sudah ada)
-        // if ($payroll_period->salarySlips()->count() > 0) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Periode tidak dapat dihapus karena sudah memiliki data slip gaji.',
-        //     ], 422);
-        // }
+        if ($payroll_period->salarySlips()->count() > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Periode tidak dapat dihapus karena sudah memiliki data slip gaji.',
+            ], 422);
+        }
 
         $payroll_period->delete();
 

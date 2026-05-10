@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\PayrollPeriodController;
 use App\Http\Controllers\Api\SalaryCategoryController;
+use App\Http\Controllers\Api\SalarySlipController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -40,4 +41,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('payroll-periods/{payroll_period}/reopen', [PayrollPeriodController::class, 'reopen']);
     });
 
+    // Salary Slips — Owner, Kepala Toko & Admin
+    Route::middleware('role:owner,head,admin')->group(function () {
+        // HARUS di atas apiResource agar tidak tertangkap sebagai {salary_slip}
+        Route::post('salary-slips/bulk-generate', [SalarySlipController::class, 'bulkGenerate']);
+
+        Route::apiResource('salary-slips', SalarySlipController::class);
+    });
 });

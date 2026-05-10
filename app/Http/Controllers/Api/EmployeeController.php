@@ -146,12 +146,12 @@ class EmployeeController extends Controller
     public function destroy(Employee $employee): JsonResponse
     {
         // Cek apakah karyawan memiliki riwayat slip gaji
-        // if ($employee->salarySlips()->count() > 0) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Karyawan tidak dapat dihapus karena memiliki riwayat slip gaji.',
-        //     ], 422);
-        // }
+        if ($employee->salarySlips()->count() > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Karyawan tidak dapat dihapus karena memiliki riwayat slip gaji.',
+            ], 422);
+        }
 
         $employee->delete();
 
