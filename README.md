@@ -121,11 +121,11 @@ php artisan key:generate
 
 Edit file `.env`:
 ```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=apiselfserviceapplication
-DB_USERNAME=root
+DB_CONNECTION=
+DB_HOST=
+DB_PORT=
+DB_DATABASE=
+DB_USERNAME=
 DB_PASSWORD=
 ```
 
