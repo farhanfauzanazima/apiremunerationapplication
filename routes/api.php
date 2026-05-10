@@ -43,9 +43,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Salary Slips — Owner, Kepala Toko & Admin
     Route::middleware('role:owner,head,admin')->group(function () {
-        // HARUS di atas apiResource agar tidak tertangkap sebagai {salary_slip}
-        Route::post('salary-slips/bulk-generate', [SalarySlipController::class, 'bulkGenerate']);
+        // Harus di atas apiResource
+        Route::post('salary-slips/bulk-generate',     [SalarySlipController::class, 'bulkGenerate']);
+        Route::post('salary-slips/bulk-generate-pdf', [SalarySlipController::class, 'bulkGeneratePDF']);
 
         Route::apiResource('salary-slips', SalarySlipController::class);
+
+        // PDF routes
+        Route::get('salary-slips/{salary_slip}/preview-pdf',  [SalarySlipController::class, 'previewPDF']);
+        Route::get('salary-slips/{salary_slip}/download-pdf', [SalarySlipController::class, 'downloadPDF']);
+        Route::post('salary-slips/{salary_slip}/generate-pdf', [SalarySlipController::class, 'generatePDF']);
     });
+
 });
