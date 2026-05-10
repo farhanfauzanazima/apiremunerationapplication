@@ -38,31 +38,26 @@ class SalarySlip extends Model
         'sent_at'              => 'datetime',
     ];
 
-    // Relasi ke PayrollPeriod
     public function period()
     {
         return $this->belongsTo(PayrollPeriod::class, 'period_id');
     }
 
-    // Relasi ke Employee
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employee_id');
     }
 
-    // Relasi ke SalaryCategory
     public function category()
     {
         return $this->belongsTo(SalaryCategory::class, 'category_id');
     }
 
-    // Relasi ke User
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    // Relasi ke EmailHistory (akan digunakan di sesi berikutnya)
     public function emailHistories()
     {
         return $this->hasMany(EmailHistory::class, 'salary_slip_id');

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\PayrollPeriodController;
 use App\Http\Controllers\Api\SalaryCategoryController;
@@ -43,16 +44,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Salary Slips — Owner, Kepala Toko & Admin
     Route::middleware('role:owner,head,admin')->group(function () {
-        // Harus di atas apiResource
         Route::post('salary-slips/bulk-generate',     [SalarySlipController::class, 'bulkGenerate']);
         Route::post('salary-slips/bulk-generate-pdf', [SalarySlipController::class, 'bulkGeneratePDF']);
 
         Route::apiResource('salary-slips', SalarySlipController::class);
 
-        // PDF routes
-        Route::get('salary-slips/{salary_slip}/preview-pdf',  [SalarySlipController::class, 'previewPDF']);
-        Route::get('salary-slips/{salary_slip}/download-pdf', [SalarySlipController::class, 'downloadPDF']);
+        Route::get('salary-slips/{salary_slip}/preview-pdf',   [SalarySlipController::class, 'previewPDF']);
+        Route::get('salary-slips/{salary_slip}/download-pdf',  [SalarySlipController::class, 'downloadPDF']);
         Route::post('salary-slips/{salary_slip}/generate-pdf', [SalarySlipController::class, 'generatePDF']);
+    });
+
+    // Email Distribution — Owner, Kepala Toko & Admin
+    Route::middleware('role:owner,head,admin')->prefix('email')->group(function () {
+        Route::post('send/{salarySlip}',        [EmailController::class, 'send']);
+        Route::post('send-bulk',                [EmailController::class, 'sendBulk']);
+        Route::post('resend/{salarySlip}',      [EmailController::class, 'resend']);
+        Route::get('history',                   [EmailController::class, 'history']);
+        Route::get('history/{salarySlip}',      [EmailController::class, 'slipHistory']);
     });
 
 });
