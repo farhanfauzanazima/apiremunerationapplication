@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SalarySlipController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\HrManagementController;
+use App\Http\Controllers\Api\BranchController;
+use App\Http\Controllers\Api\PositionController;
 
 // Public routes
 Route::prefix('auth')->group(function () {
@@ -121,5 +123,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{user}/reset-password', [HrManagementController::class, 'resetPassword']);
         Route::delete('/{user}', [HrManagementController::class, 'destroy']);
     });
-    
+
+    Route::get('/branches', [BranchController::class, 'index']);
+    Route::get('/branches/{branch}', [BranchController::class, 'show']);
+    Route::middleware('role:owner')->group(function () {
+        Route::post('/branches', [BranchController::class, 'store']);
+        Route::put('/branches/{branch}', [BranchController::class, 'update']);
+        Route::delete('/branches/{branch}', [BranchController::class, 'destroy']);
+    });
+
+    // Jabatan: owner & hr sama-sama boleh kelola
+    Route::middleware('role:owner,hr')->group(function () {
+        Route::get('/positions', [PositionController::class, 'index']);
+        Route::post('/positions', [PositionController::class, 'store']);
+        Route::put('/positions/{position}', [PositionController::class, 'update']);
+        Route::delete('/positions/{position}', [PositionController::class, 'destroy']);
+    });
 });
