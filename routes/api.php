@@ -120,4 +120,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/salary-settings', [SalarySettingController::class, 'show']);
         Route::put('/salary-settings', [SalarySettingController::class, 'update']);
     });
+
+    Route::middleware('role:owner,hr')->group(function () {
+        Route::get('payroll-periods', [PayrollPeriodController::class, 'index'])->name('payroll-periods.index');
+        Route::get('payroll-periods/{payroll_period}', [PayrollPeriodController::class, 'show'])->name('payroll-periods.show');
+        Route::post('payroll-periods', [PayrollPeriodController::class, 'store'])->name('payroll-periods.store');
+        Route::put('payroll-periods/{payroll_period}', [PayrollPeriodController::class, 'update'])->name('payroll-periods.update');
+        Route::delete('payroll-periods/{payroll_period}', [PayrollPeriodController::class, 'destroy'])->name('payroll-periods.destroy');
+    });
 });

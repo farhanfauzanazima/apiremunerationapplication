@@ -14,24 +14,23 @@ class StorePayrollPeriodRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'period_name' => 'required|string|max:50|unique:payroll_periods,period_name',
-            'start_date'  => 'required|date',
-            'end_date'    => 'required|date|after_or_equal:start_date',
-            'notes'       => 'nullable|string',
+            'name' => ['required', 'string', 'max:255'],
+            'month' => ['required', 'integer', 'between:1,12'],
+            'year' => ['required', 'integer', 'digits:4'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
-    public function messages(): array
+    public function withValidator($validator)
     {
-        return [
-            'period_name.required'      => 'Nama periode wajib diisi.',
-            'period_name.unique'        => 'Nama periode sudah ada.',
-            'period_name.max'           => 'Nama periode maksimal 50 karakter.',
-            'start_date.required'       => 'Tanggal mulai wajib diisi.',
-            'start_date.date'           => 'Format tanggal mulai tidak valid.',
-            'end_date.required'         => 'Tanggal akhir wajib diisi.',
-            'end_date.date'             => 'Format tanggal akhir tidak valid.',
-            'end_date.after_or_equal'   => 'Tanggal akhir harus sama atau setelah tanggal mulai.',
-        ];
+        $validator->after(function ($validator) {
+            $exists = \App\Models\PayrollPeriod::where('month', $this->input('month'))
+                ->where('year', $this->input('year'))
+                ->exists();
+
+            if ($exists) {
+                $validator->errors()->add('month', 'Sudah ada periode penggajian untuk bulan dan tahun ini.');
+            }
+        });
     }
 }
