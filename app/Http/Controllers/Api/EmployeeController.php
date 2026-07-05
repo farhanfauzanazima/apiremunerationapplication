@@ -6,180 +6,151 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Employee\StoreEmployeeRequest;
 use App\Http\Requests\Employee\UpdateEmployeeRequest;
 use App\Models\Employee;
-use Illuminate\Http\JsonResponse;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
 {
-    // GET /api/employees
-    public function index(Request $request): JsonResponse
+    public function __construct(protected ActivityLogService $activityLogService) {}
+
+    public function index(Request $request)
     {
-        $query = Employee::with('category:id,category_name', 'creator:id,name');
+        $user = $request->user();
+        $query = Employee::with(['position', 'branch']);
 
-        // Filter by status
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
+        // Scoping akses cabang untuk HR
+        $allowed = $user->allowedBranchIds();
+        if ($allowed !== null) {
+            $query->whereIn('branch_id', $allowed);
         }
 
-        // Filter by category
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
+        // Filter pencarian nama
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->input('search') . '%');
         }
 
-        // Search by name or email
-        if ($request->has('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('full_name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%')
-                  ->orWhere('employee_code', 'like', '%' . $request->search . '%');
-            });
+        // Filter cabang (tetap dibatasi allowedBranchIds di atas)
+        if ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->input('branch_id'));
         }
 
-        $employees = $query->orderBy('full_name', 'asc')->get()
-            ->map(function ($employee) {
-                return [
-                    'id'            => $employee->id,
-                    'employee_code' => $employee->employee_code,
-                    'full_name'     => $employee->full_name,
-                    'email'         => $employee->email,
-                    'phone'         => $employee->phone,
-                    'join_date'     => $employee->join_date,
-                    'status'        => $employee->status,
-                    'category'      => [
-                        'id'            => $employee->category->id,
-                        'category_name' => $employee->category->category_name,
-                    ],
-                    'created_by'    => $employee->creator->name ?? null,
-                    'created_at'    => $employee->created_at,
-                ];
-            });
+        // Filter jenis karyawan
+        if ($request->filled('employee_type')) {
+            $query->where('employee_type', $request->input('employee_type'));
+        }
+
+        // Filter status
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        // Filter masa kerja: '6_months' atau '1_year'
+        if ($request->filled('tenure')) {
+            $threshold = match ($request->input('tenure')) {
+                '6_months' => now()->subMonths(6),
+                '1_year' => now()->subYear(),
+                default => null,
+            };
+
+            if ($threshold) {
+                $query->where('join_date', '<=', $threshold);
+            }
+        }
+
+        $employees = $query->orderBy('name')->paginate(20)->withQueryString();
 
         return response()->json([
             'success' => true,
-            'message' => 'Data karyawan berhasil diambil.',
-            'data'    => $employees,
-        ], 200);
-    }
-
-    // POST /api/employees
-    public function store(StoreEmployeeRequest $request): JsonResponse
-    {
-        $employee = Employee::create([
-            'category_id'   => $request->category_id,
-            'full_name'     => $request->full_name,
-            'employee_code' => $request->employee_code,
-            'email'         => $request->email,
-            'phone'         => $request->phone,
-            'join_date'     => $request->join_date,
-            'status'        => 'active',
-            'created_by'    => auth()->id(),
-        ]);
-
-        $employee->load('category:id,category_name');
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Data karyawan berhasil ditambahkan.',
-            'data'    => [
-                'id'            => $employee->id,
-                'employee_code' => $employee->employee_code,
-                'full_name'     => $employee->full_name,
-                'email'         => $employee->email,
-                'phone'         => $employee->phone,
-                'join_date'     => $employee->join_date,
-                'status'        => $employee->status,
-                'category'      => [
-                    'id'            => $employee->category->id,
-                    'category_name' => $employee->category->category_name,
+            'message' => 'Daftar karyawan berhasil diambil',
+            'data' => $employees->items(),
+            'raw' => [
+                'pagination' => [
+                    'current_page' => $employees->currentPage(),
+                    'last_page' => $employees->lastPage(),
+                    'total' => $employees->total(),
                 ],
             ],
+        ]);
+    }
+
+    public function show(Request $request, Employee $employee)
+    {
+        $this->authorizeBranchAccess($request, $employee);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail karyawan berhasil diambil',
+            'data' => $employee->load(['position', 'branch']),
+        ]);
+    }
+
+    public function store(StoreEmployeeRequest $request)
+    {
+        $data = $request->validated();
+        $this->authorizeBranchIdAccess($request, $data['branch_id']);
+
+        $data['status'] = $data['status'] ?? 'aktif';
+        $employee = Employee::create($data);
+
+        $this->activityLogService->log($request->user(), 'employee', 'create', null, $employee->toArray());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Karyawan berhasil ditambahkan',
+            'data' => $employee->load(['position', 'branch']),
         ], 201);
     }
 
-    // GET /api/employees/{employee}
-    public function show(Employee $employee): JsonResponse
+    public function update(UpdateEmployeeRequest $request, Employee $employee)
     {
-        $employee->load('category:id,category_name,base_salary,allowance,late_penalty', 'creator:id,name');
+        $this->authorizeBranchAccess($request, $employee);
+        $this->authorizeBranchIdAccess($request, $request->validated('branch_id'));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Detail karyawan berhasil diambil.',
-            'data'    => [
-                'id'            => $employee->id,
-                'employee_code' => $employee->employee_code,
-                'full_name'     => $employee->full_name,
-                'email'         => $employee->email,
-                'phone'         => $employee->phone,
-                'join_date'     => $employee->join_date,
-                'status'        => $employee->status,
-                'category'      => $employee->category,
-                'created_by'    => $employee->creator->name ?? null,
-                'created_at'    => $employee->created_at,
-                'updated_at'    => $employee->updated_at,
-            ],
-        ], 200);
-    }
-
-    // PUT /api/employees/{employee}
-    public function update(UpdateEmployeeRequest $request, Employee $employee): JsonResponse
-    {
+        $oldData = $employee->toArray();
         $employee->update($request->validated());
-        $employee->load('category:id,category_name');
+
+        $this->activityLogService->log($request->user(), 'employee', 'update', $oldData, $employee->fresh()->toArray());
 
         return response()->json([
             'success' => true,
-            'message' => 'Data karyawan berhasil diperbarui.',
-            'data'    => [
-                'id'            => $employee->id,
-                'employee_code' => $employee->employee_code,
-                'full_name'     => $employee->full_name,
-                'email'         => $employee->email,
-                'phone'         => $employee->phone,
-                'join_date'     => $employee->join_date,
-                'status'        => $employee->status,
-                'category'      => $employee->category,
-            ],
-        ], 200);
+            'message' => 'Karyawan berhasil diperbarui',
+            'data' => $employee->fresh(['position', 'branch']),
+        ]);
     }
 
-    // DELETE /api/employees/{employee}
-    public function destroy(Employee $employee): JsonResponse
+    public function destroy(Request $request, Employee $employee)
     {
-        // Cek apakah karyawan memiliki riwayat slip gaji
-        if ($employee->salarySlips()->count() > 0) {
+        $this->authorizeBranchAccess($request, $employee);
+
+        if ($employee->salarySlipsTetap()->exists() || $employee->salarySlipsPartime()->exists()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Karyawan tidak dapat dihapus karena memiliki riwayat slip gaji.',
+                'message' => 'Karyawan tidak dapat dihapus karena sudah memiliki riwayat slip gaji',
             ], 422);
         }
 
+        $oldData = $employee->toArray();
         $employee->delete();
 
+        $this->activityLogService->log($request->user(), 'employee', 'delete', $oldData, null);
+
         return response()->json([
             'success' => true,
-            'message' => 'Data karyawan berhasil dihapus.',
-        ], 200);
+            'message' => 'Karyawan berhasil dihapus',
+        ]);
     }
 
-    // GET /api/employees/{employee}/salary-history
-    public function salaryHistory(Employee $employee): JsonResponse
+    protected function authorizeBranchAccess(Request $request, Employee $employee): void
     {
-        $employee->load([
-            'salarySlips.period:id,period_name,start_date,end_date',
-            'salarySlips.category:id,category_name',
-        ]);
+        if (!$request->user()->canAccessBranch($employee->branch_id)) {
+            abort(403, 'Anda tidak memiliki akses ke karyawan cabang ini');
+        }
+    }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Riwayat gaji karyawan berhasil diambil.',
-            'data'    => [
-                'employee'      => [
-                    'id'        => $employee->id,
-                    'full_name' => $employee->full_name,
-                    'email'     => $employee->email,
-                ],
-                'salary_history' => $employee->salarySlips,
-            ],
-        ], 200);
+    protected function authorizeBranchIdAccess(Request $request, int $branchId): void
+    {
+        if (!$request->user()->canAccessBranch($branchId)) {
+            abort(403, 'Anda tidak memiliki akses untuk mengelola karyawan di cabang ini');
+        }
     }
 }
