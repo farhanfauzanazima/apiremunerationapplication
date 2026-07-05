@@ -14,27 +14,36 @@ class BulkGenerateSalarySlipRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'period_id'                        => 'required|exists:payroll_periods,id',
-            'employees'                        => 'required|array|min:1',
-            'employees.*.employee_id'          => 'required|exists:employees,id',
-            'employees.*.category_id'          => 'required|exists:salary_categories,id',
-            'employees.*.total_working_days'   => 'required|integer|min:0|max:31',
-            'employees.*.late_count'           => 'nullable|integer|min:0',
-            'employees.*.bonus'                => 'nullable|numeric|min:0',
-            'employees.*.additional_deduction' => 'nullable|numeric|min:0',
-            'employees.*.notes'                => 'nullable|string',
-        ];
-    }
+            'payroll_period_id' => ['required', 'exists:payroll_periods,id'],
+            'branch_id' => ['required', 'exists:branches,id'],
 
-    public function messages(): array
-    {
-        return [
-            'period_id.required'                      => 'Periode penggajian wajib dipilih.',
-            'employees.required'                      => 'Data karyawan wajib diisi.',
-            'employees.min'                           => 'Minimal 1 karyawan harus diinput.',
-            'employees.*.employee_id.required'        => 'ID karyawan wajib diisi.',
-            'employees.*.category_id.required'        => 'Kategori gaji wajib dipilih.',
-            'employees.*.total_working_days.required' => 'Total hari kerja wajib diisi.',
+            'tetap' => ['array'],
+            'tetap.*.employee_id' => ['required', 'exists:employees,id'],
+            'tetap.*.hari_kerja' => ['required', 'integer', 'min:0'],
+            'tetap.*.alfa' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.izin' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.sakit' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.off' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.lembur' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.telat' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.harian' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.tunjangan_jabatan' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.tunjangan_bpjs' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.bonus_omset' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.bonus_kinerja' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.cashbond' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.tabungan' => ['nullable', 'integer', 'min:0'],
+
+            'partime' => ['array'],
+            'partime.*.employee_id' => ['required', 'exists:employees,id'],
+            'partime.*.hari_kerja' => ['nullable', 'integer', 'min:0'],
+            'partime.*.full' => ['nullable', 'integer', 'min:0'],
+            'partime.*.shift' => ['nullable', 'integer', 'min:0'],
+            'partime.*.reguler' => ['nullable', 'integer', 'min:0'],
+            'partime.*.sakit' => ['nullable', 'integer', 'min:0'],
+            'partime.*.off' => ['nullable', 'integer', 'min:0'],
+            'partime.*.tunjangan' => ['nullable', 'integer', 'min:0'],
+            'partime.*.bonus' => ['nullable', 'integer', 'min:0'],
         ];
     }
 }

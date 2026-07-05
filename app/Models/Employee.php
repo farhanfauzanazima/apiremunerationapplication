@@ -44,4 +44,14 @@ class Employee extends Model
     {
         return $this->join_date->diffInMonths(now());
     }
+
+    public function slipTetapForPeriod()
+    {
+        return $this->hasOne(SalarySlipTetap::class);
+    }
+
+    public function slipPartimeForPeriod()
+    {
+        return $this->hasOne(SalarySlipPartime::class);
+    }
 }

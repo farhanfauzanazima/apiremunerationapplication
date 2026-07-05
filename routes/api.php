@@ -81,12 +81,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('payroll-periods/{payroll_period}', [PayrollPeriodController::class, 'destroy'])->name('payroll-periods.destroy');
     });
 
-    // ---------- Slip Gaji (dirombak di Sesi 7 & 8 — struktur tetap/partime) ----------
-    Route::middleware('role:owner,hr')->group(function () {
-        Route::post('salary-slips/bulk-generate', [SalarySlipController::class, 'bulkGenerate']);
-        Route::apiResource('salary-slips', SalarySlipController::class);
-        Route::get('salary-slips/{salary_slip}/preview-pdf', [SalarySlipController::class, 'previewPDF']);
-        Route::get('salary-slips/{salary_slip}/download-pdf', [SalarySlipController::class, 'downloadPDF']);
+    // ---------- Slip Gaji ----------
+    Route::middleware('role:owner,hr')->prefix('salary-slips')->group(function () {
+        Route::get('bulk-data', [SalarySlipController::class, 'bulkData']);
+        Route::post('bulk-generate', [SalarySlipController::class, 'bulkGenerate']);
     });
 
     // ---------- Distribusi Gaji (dirombak di Sesi 10 — email & whatsapp) ----------

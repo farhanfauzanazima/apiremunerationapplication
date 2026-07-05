@@ -2,82 +2,118 @@
 
 namespace App\Services;
 
-use App\Models\SalaryCategory;
-use App\Models\SalarySlip;
+use App\Models\Employee;
+use App\Models\PayrollPeriod;
+use App\Models\SalarySetting;
+use Carbon\Carbon;
 
 class SalaryCalculationService
 {
     /**
-     * Hitung total gaji berdasarkan komponen yang diinput
-     * 
-     * Rumus:
-     * Total = Gaji Pokok + Tunjangan + Bonus
-     *       - (Jumlah Terlambat × Potongan per Keterlambatan)
-     *       - Potongan Tambahan
+     * Hitung slip gaji karyawan TETAP.
+     * Masa kerja dihitung relatif terhadap akhir bulan periode (bukan "hari ini"),
+     * supaya tetap akurat walau HR menginput slip untuk periode yang sudah lewat.
      */
-    public function calculate(SalaryCategory $category, array $data): array
+    public function calculateTetap(Employee $employee, array $input, SalarySetting $setting, PayrollPeriod $period): array
     {
-        $baseSalary          = (float) $category->base_salary;
-        $allowance           = (float) $category->allowance;
-        $latePenaltyPerCount = (float) $category->late_penalty;
+        $hariKerja = (int) ($input['hari_kerja'] ?? 0);
+        $alfa = (int) ($input['alfa'] ?? 0);
+        $izin = (int) ($input['izin'] ?? 0);
+        $sakit = (int) ($input['sakit'] ?? 0);
+        $off = (int) ($input['off'] ?? 0);
+        $masuk = max(0, $hariKerja - $alfa - $izin - $sakit - $off);
 
-        $lateCount           = (int) ($data['late_count'] ?? 0);
-        $bonus               = (float) ($data['bonus'] ?? 0);
-        $additionalDeduction = (float) ($data['additional_deduction'] ?? 0);
+        $lembur = (int) ($input['lembur'] ?? 0);
+        $telat = (int) ($input['telat'] ?? 0);
+        $harian = (int) ($input['harian'] ?? 0);
 
-        // Hitung potongan keterlambatan
-        $latePenaltyAmount = $lateCount * $latePenaltyPerCount;
+        $gajiPokok = $harian * $masuk;
+        $tunjanganTransport = $setting->transport_tetap * $masuk;
+        $tunjanganJabatan = (int) ($input['tunjangan_jabatan'] ?? 0);
+        $tunjanganBpjs = (int) ($input['tunjangan_bpjs'] ?? 0);
 
-        // Hitung total gaji
-        $totalSalary = $baseSalary
-            + $allowance
-            + $bonus
-            - $latePenaltyAmount
-            - $additionalDeduction;
+        $referenceDate = Carbon::create($period->year, $period->month, 1)->endOfMonth();
+        $tenureMonths = $employee->join_date->diffInMonths($referenceDate);
+        $tunjanganMasaKerja = $tenureMonths >= $setting->tenure_months_threshold
+            ? $setting->tenure_bonus_amount
+            : 0;
 
-        // Total tidak boleh negatif
-        $totalSalary = max(0, $totalSalary);
+        $bonusDisiplin = $setting->disiplin_bonus_tetap * $masuk;
+        $bonusOmset = (int) ($input['bonus_omset'] ?? 0);
+        $bonusKinerja = (int) ($input['bonus_kinerja'] ?? 0);
+
+        $cashbond = (int) ($input['cashbond'] ?? 0);
+        $tabungan = (int) ($input['tabungan'] ?? 0);
+
+        $thp = ($lembur + $gajiPokok + $tunjanganTransport + $tunjanganJabatan + $tunjanganBpjs
+                + $tunjanganMasaKerja + $bonusDisiplin + $bonusOmset + $bonusKinerja)
+               - ($cashbond + $tabungan);
+
+        $totalGaji = $thp + $tabungan + $cashbond;
 
         return [
-            'base_salary_amount'  => $baseSalary,
-            'allowance_amount'    => $allowance,
-            'late_penalty_amount' => $latePenaltyAmount,
-            'total_salary'        => $totalSalary,
+            'employee_id' => $employee->id,
+            'hari_kerja' => $hariKerja,
+            'alfa' => $alfa,
+            'izin' => $izin,
+            'sakit' => $sakit,
+            'off' => $off,
+            'masuk' => $masuk,
+            'lembur' => $lembur,
+            'telat' => $telat,
+            'harian' => $harian,
+            'gaji_pokok' => $gajiPokok,
+            'tunjangan_transport' => $tunjanganTransport,
+            'tunjangan_jabatan' => $tunjanganJabatan,
+            'tunjangan_bpjs' => $tunjanganBpjs,
+            'tunjangan_masa_kerja' => $tunjanganMasaKerja,
+            'bonus_disiplin' => $bonusDisiplin,
+            'bonus_omset' => $bonusOmset,
+            'bonus_kinerja' => $bonusKinerja,
+            'cashbond' => $cashbond,
+            'tabungan' => $tabungan,
+            'thp' => $thp,
+            'total_gaji' => $totalGaji,
         ];
     }
 
     /**
-     * Buat atau update slip gaji
+     * Hitung slip gaji TIM PARTIME.
      */
-    public function createOrUpdateSlip(array $data, int $createdBy): SalarySlip
+    public function calculatePartime(Employee $employee, array $input, SalarySetting $setting): array
     {
-        $category = SalaryCategory::findOrFail($data['category_id']);
+        $hariKerja = (int) ($input['hari_kerja'] ?? 0);
+        $full = (int) ($input['full'] ?? 0);
+        $shift = (int) ($input['shift'] ?? 0);
+        $reguler = (int) ($input['reguler'] ?? 0);
+        $sakit = (int) ($input['sakit'] ?? 0);
+        $off = (int) ($input['off'] ?? 0);
+        $tunjangan = (int) ($input['tunjangan'] ?? 0);
 
-        // Hitung komponen gaji
-        $calculation = $this->calculate($category, $data);
+        $totalFull = $setting->rate_full * $full;
+        $totalShift = $setting->rate_shift * $shift;
+        $totalReguler = $setting->rate_reguler * $reguler;
+        $totalTransport = $setting->transport_partime * ($full + $shift + $reguler);
 
-        // Buat atau update slip (berdasarkan period_id + employee_id)
-        $slip = SalarySlip::updateOrCreate(
-            [
-                'period_id'   => $data['period_id'],
-                'employee_id' => $data['employee_id'],
-            ],
-            [
-                'category_id'          => $data['category_id'],
-                'total_working_days'   => $data['total_working_days'] ?? 0,
-                'late_count'           => $data['late_count'] ?? 0,
-                'bonus'                => $data['bonus'] ?? 0,
-                'additional_deduction' => $data['additional_deduction'] ?? 0,
-                'notes'                => $data['notes'] ?? null,
-                'base_salary_amount'   => $calculation['base_salary_amount'],
-                'allowance_amount'     => $calculation['allowance_amount'],
-                'late_penalty_amount'  => $calculation['late_penalty_amount'],
-                'total_salary'         => $calculation['total_salary'],
-                'status'               => 'draft',
-                'created_by'           => $createdBy,
-            ]
-        );
+        $bonus = (int) ($input['bonus'] ?? 0);
 
-        return $slip;
+        $totalFee = $tunjangan + $totalFull + $totalShift + $totalReguler + $totalTransport + $bonus;
+
+        return [
+            'employee_id' => $employee->id,
+            'hari_kerja' => $hariKerja,
+            'full' => $full,
+            'shift' => $shift,
+            'reguler' => $reguler,
+            'sakit' => $sakit,
+            'off' => $off,
+            'tunjangan' => $tunjangan,
+            'total_full' => $totalFull,
+            'total_shift' => $totalShift,
+            'total_reguler' => $totalReguler,
+            'total_transport' => $totalTransport,
+            'bonus' => $bonus,
+            'total_fee' => $totalFee,
+        ];
     }
 }
