@@ -9,35 +9,15 @@ class PayrollPeriod extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'period_name',
-        'start_date',
-        'end_date',
-        'status',
-        'notes',
-        'created_by',
-    ];
+    protected $fillable = ['name', 'month', 'year', 'notes'];
 
-    protected $casts = [
-        'start_date' => 'date',
-        'end_date'   => 'date',
-    ];
-
-    // Relasi ke User
-    public function creator()
+    public function salarySlipsTetap()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->hasMany(SalarySlipTetap::class);
     }
 
-    // Relasi ke SalarySlip (akan digunakan di sesi berikutnya)
-    public function salarySlips()
+    public function salarySlipsPartime()
     {
-        return $this->hasMany(SalarySlip::class, 'period_id');
-    }
-
-    // Helper: cek apakah periode masih open
-    public function isOpen(): bool
-    {
-        return $this->status === 'open';
+        return $this->hasMany(SalarySlipPartime::class);
     }
 }

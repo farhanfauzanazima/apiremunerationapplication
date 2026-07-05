@@ -12,12 +12,8 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-        'phone',
-        'is_active',
+        'name', 'email', 'password', 'phone',
+        'role', 'has_all_branch_access', 'must_change_password',
     ];
 
     protected $hidden = [
@@ -26,9 +22,14 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'password' => 'hashed',
-        'is_active' => 'boolean',
+        'has_all_branch_access' => 'boolean',
+        'must_change_password' => 'boolean',
     ];
+
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class, 'user_branch');
+    }
 
     // Helper methods untuk cek role
     public function isOwner(): bool
@@ -45,4 +46,14 @@ class User extends Authenticatable
     {
         return $this->role === 'admin';
     }
+
+    public function canAccessBranch(int $branchId): bool
+    {
+        if ($this->isOwner() || $this->has_all_branch_access) {
+            return true;
+        }
+
+        return $this->branches()->where('branches.id', $branchId)->exists();
+    }
+    
 }

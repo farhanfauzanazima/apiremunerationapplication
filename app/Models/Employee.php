@@ -10,35 +10,38 @@ class Employee extends Model
     use HasFactory;
 
     protected $fillable = [
-        'category_id',
-        'full_name',
-        'employee_code',
-        'email',
-        'phone',
-        'join_date',
-        'status',
-        'created_by',
+        'name', 'code', 'position_id', 'branch_id', 'join_date',
+        'phone', 'email', 'bank_account_number', 'bank_account_name',
+        'bank_name', 'employee_type', 'status',
     ];
 
     protected $casts = [
         'join_date' => 'date',
     ];
 
-    // Relasi ke SalaryCategory
-    public function category()
+    public function position()
     {
-        return $this->belongsTo(SalaryCategory::class, 'category_id');
+        return $this->belongsTo(Position::class);
     }
 
-    // Relasi ke User (yang membuat data karyawan)
-    public function creator()
+    public function branch()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(Branch::class);
     }
 
-    // Relasi ke SalarySlip (akan digunakan di sesi berikutnya)
-    public function salarySlips()
+    public function salarySlipsTetap()
     {
-        return $this->hasMany(SalarySlip::class, 'employee_id');
+        return $this->hasMany(SalarySlipTetap::class);
+    }
+
+    public function salarySlipsPartime()
+    {
+        return $this->hasMany(SalarySlipPartime::class);
+    }
+
+    // Masa kerja dalam bulan, dihitung dari join_date ke hari ini
+    public function getTenureMonthsAttribute(): int
+    {
+        return $this->join_date->diffInMonths(now());
     }
 }

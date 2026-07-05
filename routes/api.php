@@ -27,22 +27,49 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/change-password', [AuthController::class, 'changePassword']);
     });
 
-    // Salary Categories — hanya Owner
+    // Salary Categories
+    Route::middleware('role:owner,head,admin')->group(function () {
+        // Admin boleh READ kategori (untuk form slip gaji)
+        Route::get('salary-categories',           [SalaryCategoryController::class, 'index'])->name('salary-categories.index');
+        Route::get('salary-categories/{salary_category}', [SalaryCategoryController::class, 'show'])->name('salary-categories.show');
+    });
+
     Route::middleware('role:owner')->group(function () {
-        Route::apiResource('salary-categories', SalaryCategoryController::class);
+        // Hanya Owner yang boleh CREATE/UPDATE/DELETE kategori
+        Route::post('salary-categories',                    [SalaryCategoryController::class, 'store'])->name('salary-categories.store');
+        Route::put('salary-categories/{salary_category}',   [SalaryCategoryController::class, 'update'])->name('salary-categories.update');
+        Route::delete('salary-categories/{salary_category}', [SalaryCategoryController::class, 'destroy'])->name('salary-categories.destroy');
     });
 
-    // Employees — Owner & Kepala Toko
-    Route::middleware('role:owner,head')->group(function () {
-        Route::apiResource('employees', EmployeeController::class);
-        Route::get('employees/{employee}/salary-history', [EmployeeController::class, 'salaryHistory']);
+    // Employees
+    Route::middleware('role:owner,head,admin')->group(function () {
+        // Admin boleh READ karyawan (untuk keperluan input slip gaji)
+        Route::get('employees',          [EmployeeController::class, 'index'])->name('employees.index');
+        Route::get('employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
+        Route::get('employees/{employee}/salary-history', [EmployeeController::class, 'salaryHistory'])->name('employees.salary-history');
     });
 
-    // Payroll Periods — Owner & Kepala Toko
     Route::middleware('role:owner,head')->group(function () {
-        Route::apiResource('payroll-periods', PayrollPeriodController::class);
-        Route::put('payroll-periods/{payroll_period}/close',  [PayrollPeriodController::class, 'close']);
-        Route::put('payroll-periods/{payroll_period}/reopen', [PayrollPeriodController::class, 'reopen']);
+        // Hanya Owner & Head yang boleh CREATE/UPDATE/DELETE karyawan
+        Route::post('employees',           [EmployeeController::class, 'store'])->name('employees.store');
+        Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
+        Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+    });
+
+    // Payroll Periods
+    Route::middleware('role:owner,head,admin')->group(function () {
+        // Admin boleh READ periode (untuk keperluan input slip gaji)
+        Route::get('payroll-periods',          [PayrollPeriodController::class, 'index'])->name('payroll-periods.index');
+        Route::get('payroll-periods/{payroll_period}', [PayrollPeriodController::class, 'show'])->name('payroll-periods.show');
+    });
+
+    Route::middleware('role:owner,head')->group(function () {
+        // Hanya Owner & Head yang boleh CREATE/UPDATE/DELETE periode
+        Route::post('payroll-periods',                    [PayrollPeriodController::class, 'store'])->name('payroll-periods.store');
+        Route::put('payroll-periods/{payroll_period}',    [PayrollPeriodController::class, 'update'])->name('payroll-periods.update');
+        Route::delete('payroll-periods/{payroll_period}', [PayrollPeriodController::class, 'destroy'])->name('payroll-periods.destroy');
+        Route::put('payroll-periods/{payroll_period}/close',  [PayrollPeriodController::class, 'close'])->name('payroll-periods.close');
+        Route::put('payroll-periods/{payroll_period}/reopen', [PayrollPeriodController::class, 'reopen'])->name('payroll-periods.reopen');
     });
 
     // Salary Slips — Owner, Kepala Toko & Admin
@@ -86,5 +113,4 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/',    [ActivityLogController::class, 'index']);
         Route::get('/{activity_log}', [ActivityLogController::class, 'show']);
     });
-
 });

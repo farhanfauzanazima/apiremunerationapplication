@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->statefulApi();
 
+        // CORS — izinkan frontend mengakses API
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
+
         // Register alias untuk RoleMiddleware
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
