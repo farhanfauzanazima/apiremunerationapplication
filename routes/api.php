@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PayrollPeriodController;
 use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SalarySlipController;
+use App\Http\Controllers\Api\SalarySettingController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================================
@@ -113,5 +114,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:owner')->prefix('activity-logs')->group(function () {
         Route::get('/', [ActivityLogController::class, 'index']);
         Route::get('/{activity_log}', [ActivityLogController::class, 'show']);
+    });
+
+    Route::middleware('role:owner,hr')->group(function () {
+        Route::get('/salary-settings', [SalarySettingController::class, 'show']);
+        Route::put('/salary-settings', [SalarySettingController::class, 'update']);
     });
 });
