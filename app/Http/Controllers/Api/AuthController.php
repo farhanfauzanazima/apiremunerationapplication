@@ -6,154 +6,96 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
+use App\Models\User;
 use App\Services\ActivityLogService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    // POST /api/auth/login
-    public function login(LoginRequest $request): JsonResponse
+    public function __construct(protected ActivityLogService $activityLogService) {}
+
+    public function login(LoginRequest $request)
     {
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        $credentials = $request->validated();
+
+        if (!Auth::attempt($credentials)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Email atau password salah.',
+                'message' => 'Email atau password salah',
             ], 401);
         }
 
+        /** @var User $user */
         $user = Auth::user();
+        $token = $user->createToken('api-token')->plainTextToken;
 
-        if (!$user->is_active) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Akun Anda tidak aktif. Hubungi administrator.',
-            ], 403);
-        }
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        // Catat activity log
-        ActivityLogService::log(
-            'login',
-            'auth',
-            'User ' . $user->name . ' (' . $user->role . ') login ke sistem',
-        );
+        $this->activityLogService->log($user, 'auth', 'login', null, null);
 
         return response()->json([
             'success' => true,
-            'message' => 'Login berhasil.',
-            'data'    => [
-                'user'       => [
-                    'id'    => $user->id,
-                    'name'  => $user->name,
-                    'email' => $user->email,
-                    'role'  => $user->role,
-                    'phone' => $user->phone,
-                ],
-                'token'      => $token,
-                'token_type' => 'Bearer',
+            'message' => 'Login berhasil',
+            'data' => [
+                'token' => $token,
+                'user' => $user->load('branches'),
+                'must_change_password' => $user->must_change_password,
             ],
-        ], 200);
+        ]);
     }
 
-    // POST /api/auth/logout
-    public function logout(): JsonResponse
+    public function logout()
     {
         $user = auth()->user();
-
-        // Catat activity log sebelum token dihapus
-        ActivityLogService::log(
-            'logout',
-            'auth',
-            'User ' . $user->name . ' logout dari sistem',
-        );
-
         $user->currentAccessToken()->delete();
 
+        $this->activityLogService->log($user, 'auth', 'logout', null, null);
+
         return response()->json([
             'success' => true,
-            'message' => 'Logout berhasil.',
-        ], 200);
+            'message' => 'Logout berhasil',
+        ]);
     }
 
-    // GET /api/auth/profile
-    public function profile(): JsonResponse
+    public function profile()
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Profil berhasil diambil',
+            'data' => auth()->user()->load('branches'),
+        ]);
+    }
+
+    public function updateProfile(UpdateProfileRequest $request)
     {
         $user = auth()->user();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Data profil berhasil diambil.',
-            'data'    => [
-                'id'        => $user->id,
-                'name'      => $user->name,
-                'email'     => $user->email,
-                'role'      => $user->role,
-                'phone'     => $user->phone,
-                'is_active' => $user->is_active,
-                'created_at'=> $user->created_at,
-            ],
-        ], 200);
-    }
-
-    // PUT /api/auth/profile
-    public function updateProfile(UpdateProfileRequest $request): JsonResponse
-    {
-        $user    = auth()->user();
-        $oldData = $user->only('name', 'email', 'phone');
-
         $user->update($request->validated());
 
-        ActivityLogService::log(
-            'update',
-            'auth',
-            'User ' . $user->name . ' memperbarui profil',
-            $oldData,
-            $request->validated(),
-        );
-
         return response()->json([
             'success' => true,
-            'message' => 'Profil berhasil diperbarui.',
-            'data'    => [
-                'id'    => $user->id,
-                'name'  => $user->name,
-                'email' => $user->email,
-                'role'  => $user->role,
-                'phone' => $user->phone,
-            ],
-        ], 200);
+            'message' => 'Profil berhasil diperbarui',
+            'data' => $user,
+        ]);
     }
 
-    // POST /api/auth/change-password
-    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    public function changePassword(ChangePasswordRequest $request)
     {
         $user = auth()->user();
 
-        if (!Hash::check($request->current_password, $user->password)) {
+        if (!Hash::check($request->validated('current_password'), $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Password lama tidak sesuai.',
+                'message' => 'Password lama tidak sesuai',
             ], 422);
         }
 
         $user->update([
-            'password' => Hash::make($request->new_password),
+            'password' => Hash::make($request->validated('new_password')),
+            'must_change_password' => false,
         ]);
-
-        ActivityLogService::log(
-            'change_password',
-            'auth',
-            'User ' . $user->name . ' mengubah password',
-        );
-
-        $user->tokens()->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Password berhasil diubah. Silakan login kembali.',
-        ], 200);
+            'message' => 'Password berhasil diubah',
+        ]);
     }
 }

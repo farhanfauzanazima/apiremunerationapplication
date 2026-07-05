@@ -7,9 +7,10 @@ use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\PayrollPeriodController;
 use App\Http\Controllers\Api\ReportController;
-use App\Http\Controllers\Api\SalaryCategoryController;
+// use App\Http\Controllers\Api\SalaryCategoryController;
 use App\Http\Controllers\Api\SalarySlipController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\HrManagementController;
 
 // Public routes
 Route::prefix('auth')->group(function () {
@@ -20,26 +21,25 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
 
     // Auth routes
-    Route::prefix('auth')->group(function () {
-        Route::post('/logout',          [AuthController::class, 'logout']);
-        Route::get('/profile',          [AuthController::class, 'profile']);
-        Route::put('/profile',          [AuthController::class, 'updateProfile']);
-        Route::post('/change-password', [AuthController::class, 'changePassword']);
-    });
+    // Route::prefix('auth')->group(function () {
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/profile', [AuthController::class, 'profile']);
+    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
 
     // Salary Categories
-    Route::middleware('role:owner,head,admin')->group(function () {
-        // Admin boleh READ kategori (untuk form slip gaji)
-        Route::get('salary-categories',           [SalaryCategoryController::class, 'index'])->name('salary-categories.index');
-        Route::get('salary-categories/{salary_category}', [SalaryCategoryController::class, 'show'])->name('salary-categories.show');
-    });
+    // Route::middleware('role:owner,head,admin')->group(function () {
+    //     // Admin boleh READ kategori (untuk form slip gaji)
+    //     Route::get('salary-categories',           [SalaryCategoryController::class, 'index'])->name('salary-categories.index');
+    //     Route::get('salary-categories/{salary_category}', [SalaryCategoryController::class, 'show'])->name('salary-categories.show');
+    // });
 
-    Route::middleware('role:owner')->group(function () {
-        // Hanya Owner yang boleh CREATE/UPDATE/DELETE kategori
-        Route::post('salary-categories',                    [SalaryCategoryController::class, 'store'])->name('salary-categories.store');
-        Route::put('salary-categories/{salary_category}',   [SalaryCategoryController::class, 'update'])->name('salary-categories.update');
-        Route::delete('salary-categories/{salary_category}', [SalaryCategoryController::class, 'destroy'])->name('salary-categories.destroy');
-    });
+    // Route::middleware('role:owner')->group(function () {
+    //     // Hanya Owner yang boleh CREATE/UPDATE/DELETE kategori
+    //     Route::post('salary-categories',                    [SalaryCategoryController::class, 'store'])->name('salary-categories.store');
+    //     Route::put('salary-categories/{salary_category}',   [SalaryCategoryController::class, 'update'])->name('salary-categories.update');
+    //     Route::delete('salary-categories/{salary_category}', [SalaryCategoryController::class, 'destroy'])->name('salary-categories.destroy');
+    // });
 
     // Employees
     Route::middleware('role:owner,head,admin')->group(function () {
@@ -113,4 +113,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/',    [ActivityLogController::class, 'index']);
         Route::get('/{activity_log}', [ActivityLogController::class, 'show']);
     });
+
+    Route::middleware('role:owner')->prefix('hr-management')->group(function () {
+        Route::get('/', [HrManagementController::class, 'index']);
+        Route::post('/', [HrManagementController::class, 'store']);
+        Route::put('/{user}', [HrManagementController::class, 'update']);
+        Route::post('/{user}/reset-password', [HrManagementController::class, 'resetPassword']);
+        Route::delete('/{user}', [HrManagementController::class, 'destroy']);
+    });
+    
 });

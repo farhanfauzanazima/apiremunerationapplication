@@ -55,5 +55,15 @@ class User extends Authenticatable
 
         return $this->branches()->where('branches.id', $branchId)->exists();
     }
+
+    // null = akses semua cabang, array = daftar branch_id yang diizinkan
+    public function allowedBranchIds(): ?array
+    {
+        if ($this->isOwner() || $this->has_all_branch_access) {
+            return null;
+        }
+
+        return $this->branches()->pluck('branches.id')->toArray();
+    }
     
 }

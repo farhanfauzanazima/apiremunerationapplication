@@ -12,17 +12,10 @@ class RoleMiddleware
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (!$user || !in_array($user->role, $roles, true)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized. Silakan login terlebih dahulu.',
-            ], 401);
-        }
-
-        if (!in_array($user->role, $roles)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Forbidden. Anda tidak memiliki akses ke halaman ini.',
+                'message' => 'Anda tidak memiliki akses untuk melakukan aksi ini.',
             ], 403);
         }
 
