@@ -85,8 +85,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:owner,hr')->prefix('salary-slips')->group(function () {
         Route::get('bulk-data', [SalarySlipController::class, 'bulkData']);
         Route::post('bulk-generate', [SalarySlipController::class, 'bulkGenerate']);
-    });
 
+        Route::get('/', [SalarySlipController::class, 'index']);
+        Route::get('{type}/{id}', [SalarySlipController::class, 'show'])->whereIn('type', ['tetap', 'partime']);
+        Route::put('tetap/{id}', [SalarySlipController::class, 'updateTetap']);
+        Route::put('partime/{id}', [SalarySlipController::class, 'updatePartime']);
+        Route::delete('{type}/{id}', [SalarySlipController::class, 'destroy'])->whereIn('type', ['tetap', 'partime']);
+    });
     // ---------- Distribusi Gaji (dirombak di Sesi 10 — email & whatsapp) ----------
     Route::middleware('role:owner,hr')->prefix('distribution')->group(function () {
         Route::post('send-email', [EmailController::class, 'sendBulk']);
