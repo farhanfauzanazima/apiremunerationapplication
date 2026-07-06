@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Distribution\SendBulkDistributionRequest;
+use App\Jobs\SendSalarySlipEmailJob;
+use App\Jobs\SendSalarySlipWhatsappJob;
 use App\Models\DistributionHistory;
 use App\Models\SalarySlipPartime;
 use App\Models\SalarySlipTetap;
@@ -22,37 +24,44 @@ class DistributionController extends Controller
     {
         $user = $request->user();
         $channel = $request->validated('channel');
-        $results = [];
+        $queued = 0;
+        $skipped = [];
 
         foreach ($request->validated('items') as $item) {
-            $slip = $item['type'] === 'tetap'
-                ? SalarySlipTetap::with(['employee.branch', 'payrollPeriod'])->find($item['id'])
-                : SalarySlipPartime::with(['employee.branch', 'payrollPeriod'])->find($item['id']);
+            $slipClass = $item['type'] === 'tetap' ? SalarySlipTetap::class : SalarySlipPartime::class;
+            $slip = $slipClass::with('employee')->find($item['id']);
 
             if (!$slip || !$user->canAccessBranch($slip->employee->branch_id)) {
-                $results[] = ['id' => $item['id'], 'type' => $item['type'], 'success' => false, 'message' => 'Tidak ditemukan atau tidak memiliki akses'];
+                $skipped[] = $item;
                 continue;
             }
 
-            $distribution = $channel === 'email'
-                ? $this->distributionService->sendEmail($slip, $item['type'], $user->name)
-                : $this->distributionService->sendWhatsapp($slip, $item['type'], $user->id);
+            // Catat status "pending" dulu supaya langsung terlihat di Riwayat Distribusi
+            DistributionHistory::firstOrCreate(
+                ['slip_id' => $slip->id, 'slip_type' => $slipClass, 'channel' => $channel],
+                ['status' => 'pending']
+            );
 
-            $results[] = [
-                'id' => $item['id'],
-                'type' => $item['type'],
-                'employee' => $slip->employee->name,
-                'success' => $distribution->status === 'sent',
-                'message' => $distribution->note ?? 'Terkirim',
-            ];
+            if ($channel === 'email') {
+                SendSalarySlipEmailJob::dispatch($item['type'], $item['id'], $user->name);
+            } else {
+                SendSalarySlipWhatsappJob::dispatch($item['type'], $item['id'], $user->id);
+            }
+
+            $queued++;
         }
 
-        $this->activityLogService->log($user, 'distribution', "send_bulk_{$channel}", null, ['total' => count($results)]);
+        $this->activityLogService->log($user, 'distribution', "queue_bulk_{$channel}", null, ['total_queued' => $queued]);
+
+        $channelLabel = $channel === 'email' ? 'Email' : 'WhatsApp';
 
         return response()->json([
             'success' => true,
-            'message' => 'Proses distribusi selesai',
-            'data' => $results,
+            'message' => "{$queued} slip gaji sedang diproses untuk dikirim via {$channelLabel}. Cek Riwayat Distribusi beberapa saat lagi untuk melihat status terkini.",
+            'data' => [
+                'queued' => $queued,
+                'skipped' => $skipped,
+            ],
         ]);
     }
 
