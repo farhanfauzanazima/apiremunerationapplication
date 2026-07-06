@@ -8,14 +8,19 @@ use App\Models\Employee;
 use App\Models\PayrollPeriod;
 use App\Models\SalarySlipPartime;
 use App\Models\SalarySlipTetap;
+use App\Services\SalaryTrendService;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    public function __construct(protected SalaryTrendService $salaryTrendService)
+    {
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
-        $allowed = $user->allowedBranchIds(); // null = semua cabang
+        $allowed = $user->allowedBranchIds(); // null = akses semua cabang
 
         $employeeQuery = Employee::query();
         if ($allowed !== null) {
@@ -29,10 +34,15 @@ class DashboardController extends Controller
         $latestPeriod = PayrollPeriod::orderByDesc('year')->orderByDesc('month')->first();
 
         $tetapQuery = SalarySlipTetap::query()->whereHas('employee', function ($q) use ($allowed) {
-            if ($allowed !== null) $q->whereIn('branch_id', $allowed);
+            if ($allowed !== null) {
+                $q->whereIn('branch_id', $allowed);
+            }
         });
+
         $partimeQuery = SalarySlipPartime::query()->whereHas('employee', function ($q) use ($allowed) {
-            if ($allowed !== null) $q->whereIn('branch_id', $allowed);
+            if ($allowed !== null) {
+                $q->whereIn('branch_id', $allowed);
+            }
         });
 
         $totalGajiPeriodeTerakhir = 0;
@@ -51,6 +61,8 @@ class DashboardController extends Controller
         $totalGagal = (clone $distributionQuery)->where('status', 'failed')->count();
         $totalPending = (clone $distributionQuery)->where('status', 'pending')->count();
 
+        $trend = $this->salaryTrendService->build($allowed);
+
         return response()->json([
             'success' => true,
             'message' => 'Data dashboard berhasil diambil',
@@ -66,9 +78,8 @@ class DashboardController extends Controller
                     'gagal' => $totalGagal,
                     'pending' => $totalPending,
                 ],
+                'trend' => $trend,
             ],
         ]);
     }
-
-    
 }
