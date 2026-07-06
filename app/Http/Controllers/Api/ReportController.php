@@ -61,22 +61,7 @@ class ReportController extends Controller
     public function statistics(Request $request)
     {
         $allowed = $request->user()->allowedBranchIds();
-        $periods = PayrollPeriod::orderByDesc('year')->orderByDesc('month')->limit(6)->get()->reverse()->values();
-
-        $trend = $periods->map(function ($period) use ($allowed) {
-            $tetapTotal = SalarySlipTetap::where('payroll_period_id', $period->id)
-                ->whereHas('employee', fn ($q) => $allowed !== null ? $q->whereIn('branch_id', $allowed) : $q)
-                ->sum('total_gaji');
-
-            $partimeTotal = SalarySlipPartime::where('payroll_period_id', $period->id)
-                ->whereHas('employee', fn ($q) => $allowed !== null ? $q->whereIn('branch_id', $allowed) : $q)
-                ->sum('total_fee');
-
-            return [
-                'period' => $period->name,
-                'total' => $tetapTotal + $partimeTotal,
-            ];
-        });
+        $trend = app(\App\Services\SalaryTrendService::class)->build($allowed);
 
         return response()->json([
             'success' => true,

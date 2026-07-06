@@ -31,7 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/profile', [AuthController::class, 'profile']);
     Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
-    Route::put('/auth/change-password', [AuthController::class, 'changePassword']);
+   Route::match(['put', 'post'], '/auth/change-password', [AuthController::class, 'changePassword']);
 
     // ---------- Manajemen HR — Owner only ----------
     Route::middleware('role:owner')->prefix('hr-management')->group(function () {
@@ -99,10 +99,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('{type}/{id}/generate-link', [SalarySlipController::class, 'generatePublicLink'])->whereIn('type', ['tetap', 'partime']);
     });
 
-    // ---------- Distribusi Gaji (dirombak di Sesi 10 — email & whatsapp) ----------
+    // ---------- Distribusi Gaji ----------
     Route::middleware('role:owner,hr')->prefix('distribution')->group(function () {
         Route::post('send-bulk', [DistributionController::class, 'sendBulk']);
         Route::get('history', [DistributionController::class, 'history']);
+        Route::post('resend/{id}', [DistributionController::class, 'resend']);
     });
 
     // ---------- Dashboard ----------

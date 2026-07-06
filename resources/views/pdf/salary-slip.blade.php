@@ -6,7 +6,8 @@
         @page { margin: 30px 40px; }
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 12px; color: #222; }
         .header { text-align: center; margin-bottom: 6px; }
-        .header img { height: 70px; margin-bottom: 4px; }
+        .header img { height: 130px; /* naikkan angka ini jika logo masih kurang besar, turunkan jika terlalu besar/kepenuhan */
+            margin-bottom: 4px; }
         .company-address { text-align: center; font-size: 11px; line-height: 1.5; }
         .divider { border-top: 3px double #333; margin: 10px 0 14px; }
         .title { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 2px; }

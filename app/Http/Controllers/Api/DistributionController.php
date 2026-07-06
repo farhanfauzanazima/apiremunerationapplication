@@ -87,4 +87,29 @@ class DistributionController extends Controller
             'data' => $data,
         ]);
     }
+
+    public function resend(Request $request, int $id)
+    {
+        $distribution = \App\Models\DistributionHistory::findOrFail($id);
+        $slip = $distribution->slip;
+
+        if (!$slip || !$request->user()->canAccessBranch($slip->employee->branch_id)) {
+            abort(403, 'Anda tidak memiliki akses untuk mengirim ulang distribusi ini');
+        }
+
+        $type = $distribution->slip_type === \App\Models\SalarySlipTetap::class ? 'tetap' : 'partime';
+
+        $distribution->update(['status' => 'pending', 'note' => null]);
+
+        if ($distribution->channel === 'email') {
+            \App\Jobs\SendSalarySlipEmailJob::dispatch($type, $slip->id, $request->user()->name);
+        } else {
+            \App\Jobs\SendSalarySlipWhatsappJob::dispatch($type, $slip->id, $request->user()->id);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Distribusi sedang dikirim ulang. Pastikan queue worker (php artisan queue:work) sedang berjalan.',
+        ]);
+    }
 }
