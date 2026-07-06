@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SalarySlipController;
 use App\Http\Controllers\Api\SalarySettingController;
 use App\Http\Controllers\Api\PublicSlipController;
+use App\Http\Controllers\Api\DistributionController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================================
@@ -100,9 +101,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---------- Distribusi Gaji (dirombak di Sesi 10 — email & whatsapp) ----------
     Route::middleware('role:owner,hr')->prefix('distribution')->group(function () {
-        Route::post('send-email', [EmailController::class, 'sendBulk']);
-        Route::post('send-whatsapp', [EmailController::class, 'sendBulkWhatsapp']);
-        Route::get('history', [EmailController::class, 'history']);
+        Route::post('send-bulk', [DistributionController::class, 'sendBulk']);
+        Route::get('history', [DistributionController::class, 'history']);
     });
 
     // ---------- Dashboard ----------
