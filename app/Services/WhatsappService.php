@@ -27,19 +27,35 @@ class WhatsappService
 
     public function sendMessage(string $phone, string $message): array
     {
+        $token = config('services.fonnte.token');
+
+        if (empty($token) || $token === 'your_fonnte_token_here') {
+            Log::warning('Fonnte token belum diisi dengan token asli.');
+
+            return [
+                'success' => false,
+                'message' => 'Token Fonnte belum dikonfigurasi. Cek FONNTE_API_TOKEN di file .env.',
+                'raw' => [],
+            ];
+        }
+
         try {
             $response = Http::withHeaders([
-                'Authorization' => config('services.fonnte.token'),
-            ])->post(config('services.fonnte.url'), [
-                'target' => $this->normalizePhone($phone),
-                'message' => $message,
-            ]);
+                    'Authorization' => $token,
+                ])
+                ->asForm() // Fonnte mengharapkan form data, bukan JSON
+                ->post(config('services.fonnte.url'), [
+                    'target' => $this->normalizePhone($phone),
+                    'message' => $message,
+                ]);
 
             $json = $response->json() ?? [];
 
+            $success = filter_var($json['status'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
             return [
-                'success' => $response->successful() && ($json['status'] ?? false) !== false,
-                'message' => $json['reason'] ?? $json['detail'] ?? 'Terkirim',
+                'success' => $success,
+                'message' => $json['reason'] ?? $json['detail'] ?? ($success ? 'Terkirim' : 'Gagal tanpa keterangan dari Fonnte'),
                 'raw' => $json,
             ];
         } catch (\Throwable $e) {

@@ -95,8 +95,13 @@ class DistributionService
         $bulan = $this->bulanIndo()[$period->month] ?? $period->month;
         $link = url("/public/slip/{$token}");
 
-        $message = "Halo {$employee->name}, berikut rincian gaji kamu bulan {$bulan} {$period->year}. "
-            . "Akses link dibawah ini untuk mendownload PDF-nya:\n{$link}";
+        $setting = \App\Models\NotificationSetting::current();
+        $message = $setting->render([
+            'nama' => $employee->name,
+            'bulan' => $bulan,
+            'tahun' => $period->year,
+            'link' => $link,
+        ]);
 
         $result = $this->whatsappService->sendMessage($employee->phone, $message);
 

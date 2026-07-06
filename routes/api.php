@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\SalarySlipController;
 use App\Http\Controllers\Api\SalarySettingController;
 use App\Http\Controllers\Api\PublicSlipController;
 use App\Http\Controllers\Api\DistributionController;
+use App\Http\Controllers\Api\NotificationSettingController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================================
@@ -31,7 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/profile', [AuthController::class, 'profile']);
     Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
-   Route::match(['put', 'post'], '/auth/change-password', [AuthController::class, 'changePassword']);
+    Route::match(['put', 'post'], '/auth/change-password', [AuthController::class, 'changePassword']);
 
     // ---------- Manajemen HR — Owner only ----------
     Route::middleware('role:owner')->prefix('hr-management')->group(function () {
@@ -133,5 +134,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('payroll-periods', [PayrollPeriodController::class, 'store'])->name('payroll-periods.store');
         Route::put('payroll-periods/{payroll_period}', [PayrollPeriodController::class, 'update'])->name('payroll-periods.update');
         Route::delete('payroll-periods/{payroll_period}', [PayrollPeriodController::class, 'destroy'])->name('payroll-periods.destroy');
+    });
+
+    // ---------- WhatsApp ----------
+    Route::middleware('role:owner,hr')->group(function () {
+        Route::get('/notification-settings', [NotificationSettingController::class, 'show']);
+        Route::put('/notification-settings', [NotificationSettingController::class, 'update']);
     });
 });
