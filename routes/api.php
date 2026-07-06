@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SalarySlipController;
 use App\Http\Controllers\Api\SalarySettingController;
+use App\Http\Controllers\Api\PublicSlipController;
 use Illuminate\Support\Facades\Route;
 
 // ============================================================
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 // ============================================================
 Route::post('/auth/login', [AuthController::class, 'login']);
 
+Route::get('/public/slip/{token}', [PublicSlipController::class, 'show']);
 // ============================================================
 // PROTECTED ROUTES
 // ============================================================
@@ -91,7 +93,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('tetap/{id}', [SalarySlipController::class, 'updateTetap']);
         Route::put('partime/{id}', [SalarySlipController::class, 'updatePartime']);
         Route::delete('{type}/{id}', [SalarySlipController::class, 'destroy'])->whereIn('type', ['tetap', 'partime']);
+        Route::get('{type}/{id}/preview-pdf', [SalarySlipController::class, 'previewPDF'])->whereIn('type', ['tetap', 'partime']);
+        Route::get('{type}/{id}/download-pdf', [SalarySlipController::class, 'downloadPDF'])->whereIn('type', ['tetap', 'partime']);
+        Route::post('{type}/{id}/generate-link', [SalarySlipController::class, 'generatePublicLink'])->whereIn('type', ['tetap', 'partime']);
     });
+
     // ---------- Distribusi Gaji (dirombak di Sesi 10 — email & whatsapp) ----------
     Route::middleware('role:owner,hr')->prefix('distribution')->group(function () {
         Route::post('send-email', [EmailController::class, 'sendBulk']);

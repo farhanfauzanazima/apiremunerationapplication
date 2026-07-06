@@ -18,6 +18,8 @@ class SalarySlipController extends Controller
     public function __construct(
         protected SalaryCalculationService $calculationService,
         protected ActivityLogService $activityLogService,
+        protected \App\Services\PDFService $pdfService,
+        protected \App\Services\PublicLinkService $publicLinkService,
     ) {}
 
     /**
@@ -270,5 +272,42 @@ class SalarySlipController extends Controller
         if (!$request->user()->canAccessBranch($slip->employee->branch_id)) {
             abort(403, 'Anda tidak memiliki akses ke slip gaji cabang ini');
         }
+    }
+
+    public function previewPDF(Request $request, string $type, int $id)
+    {
+        $slip = $this->resolveSlip($type, $id);
+        $this->authorizeSlipAccess($request, $slip);
+
+        $pdf = $this->pdfService->renderSalarySlip($slip, $type, $request->user()->name);
+
+        return $pdf->stream("slip-gaji-{$slip->employee->name}.pdf");
+    }
+
+    public function downloadPDF(Request $request, string $type, int $id)
+    {
+        $slip = $this->resolveSlip($type, $id);
+        $this->authorizeSlipAccess($request, $slip);
+
+        $pdf = $this->pdfService->renderSalarySlip($slip, $type, $request->user()->name);
+
+        return $pdf->download("slip-gaji-{$slip->employee->name}.pdf");
+    }
+
+    public function generatePublicLink(Request $request, string $type, int $id)
+    {
+        $slip = $this->resolveSlip($type, $id);
+        $this->authorizeSlipAccess($request, $slip);
+
+        $token = $this->publicLinkService->getOrCreateToken($slip, $type);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Link publik berhasil dibuat',
+            'data' => [
+                'token' => $token,
+                'url' => url("/public/slip/{$token}"),
+            ],
+        ]);
     }
 }
