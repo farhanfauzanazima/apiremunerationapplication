@@ -106,17 +106,13 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ---------- Dashboard ----------
-    Route::middleware('role:owner,hr')->prefix('dashboard')->group(function () {
-        Route::get('owner', [DashboardController::class, 'owner']);
-        Route::get('hr', [DashboardController::class, 'hr']);
-    });
+    Route::middleware('role:owner,hr')->get('/dashboard', [DashboardController::class, 'index']);
 
     // ---------- Laporan (dirombak di Sesi 11) ----------
     Route::middleware('role:owner,hr')->prefix('reports')->group(function () {
         Route::get('salary-summary', [ReportController::class, 'salarySummary']);
-        Route::get('salary-summary/export-pdf', [ReportController::class, 'exportPDF']);
-        Route::get('employee/{employeeId}', [ReportController::class, 'employeeReport']);
         Route::get('statistics', [ReportController::class, 'statistics']);
+        Route::get('employee/{employeeId}', [ReportController::class, 'employeeReport']);
     });
 
     // ---------- Activity Log — Owner only ----------
