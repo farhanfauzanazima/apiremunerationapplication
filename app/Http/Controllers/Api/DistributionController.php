@@ -67,7 +67,7 @@ class DistributionController extends Controller
 
     public function history(Request $request)
     {
-        $query = DistributionHistory::with('sentBy')->latest();
+        $query = DistributionHistory::with(['sentBy', 'slip.employee'])->latest();
 
         if ($request->filled('channel')) {
             $query->where('channel', $request->input('channel'));
@@ -75,14 +75,16 @@ class DistributionController extends Controller
 
         $histories = $query->paginate(30);
 
+        $data = collect($histories->items())->map(function ($h) {
+            return array_merge($h->toArray(), [
+                'employee_name' => optional($h->slip?->employee)->name,
+            ]);
+        })->values();
+
         return response()->json([
             'success' => true,
             'message' => 'Riwayat distribusi berhasil diambil',
-            'data' => $histories->items()->map(function ($h) {
-                return array_merge($h->toArray(), [
-                    'employee_name' => optional($h->slip?->employee)->name,
-                ]);
-            }),
+            'data' => $data,
         ]);
     }
 }

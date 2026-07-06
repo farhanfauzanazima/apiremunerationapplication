@@ -6,6 +6,9 @@ use App\Mail\SalarySlipMail;
 use App\Models\DistributionHistory;
 use App\Models\SalarySlipPartime;
 use App\Models\SalarySlipTetap;
+use App\Services\PDFService;
+use App\Services\PublicLinkService;
+use App\Services\WhatsappService;
 use Illuminate\Support\Facades\Mail;
 
 class DistributionService
@@ -19,9 +22,18 @@ class DistributionService
     protected function bulanIndo(): array
     {
         return [
-            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
-            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
-            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+            1 => 'Januari',
+            2 => 'Februari',
+            3 => 'Maret',
+            4 => 'April',
+            5 => 'Mei',
+            6 => 'Juni',
+            7 => 'Juli',
+            8 => 'Agustus',
+            9 => 'September',
+            10 => 'Oktober',
+            11 => 'November',
+            12 => 'Desember',
         ];
     }
 
