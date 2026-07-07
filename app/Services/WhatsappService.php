@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class WhatsappService
@@ -22,9 +21,16 @@ class WhatsappService
         return '62' . $phone;
     }
 
+    /**
+     * Memakai PHP Streams native (bukan ekstensi cURL), untuk menghindari
+     * bug/fingerprint TLS spesifik pada build cURL 8.7.0-DEV di lingkungan
+     * lokal Windows/Laragon yang terbukti ditolak (405) oleh server Fonnte,
+     * padahal token & format data sudah benar (terverifikasi via curl.exe manual).
+     */
     public function sendMessage(string $phone, string $message): array
     {
         $token = config('services.fonnte.token');
+        $url = config('services.fonnte.url');
 
         if (empty($token) || $token === 'your_fonnte_token_here') {
             return [
@@ -35,50 +41,93 @@ class WhatsappService
             ];
         }
 
-        try {
-            $response = Http::withHeaders(['Authorization' => $token])
-                ->asMultipart() // Fonnte mengharapkan multipart/form-data, sesuai contoh resmi mereka (CURLOPT_POSTFIELDS berupa array)
-                ->attach('target', $this->normalizePhone($phone))
-                ->attach('message', $message)
-                ->post(config('services.fonnte.url'));
+        $target = $this->normalizePhone($phone);
+        $boundary = '----FonnteBoundary' . bin2hex(random_bytes(16));
 
-            $bodyRaw = $response->body();
-            $json = $response->json();
+        $body = $this->buildMultipartBody($boundary, [
+            'target' => $target,
+            'message' => $message,
+        ]);
 
-            $debug = [
-                'http_status' => $response->status(),
-                'content_type' => $response->header('Content-Type'),
-                'body_raw' => mb_substr($bodyRaw, 0, 1000),
-            ];
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => implode("\r\n", [
+                    'Authorization: ' . $token,
+                    'Content-Type: multipart/form-data; boundary=' . $boundary,
+                    'User-Agent: PHP-Stream-Client/1.0',
+                ]),
+                'content' => $body,
+                'timeout' => 30,
+                'ignore_errors' => true, // supaya body tetap terbaca meski status bukan 200
+            ],
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+            ],
+        ]);
 
-            if ($json === null) {
-                Log::warning('Fonnte response bukan JSON valid', $debug);
+        $responseBody = @file_get_contents($url, false, $context);
+        $responseHeaders = $http_response_header ?? [];
 
-                return [
-                    'success' => false,
-                    'message' => 'Respons dari Fonnte tidak dikenali (bukan JSON). Cek log untuk detail body mentah.',
-                    'raw' => [],
-                    'debug' => $debug,
-                ];
-            }
+        $httpStatus = 0;
+        if (!empty($responseHeaders[0]) && preg_match('#HTTP/\S+\s(\d{3})#', $responseHeaders[0], $m)) {
+            $httpStatus = (int) $m[1];
+        }
 
-            $success = filter_var($json['status'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $debug = [
+            'http_status' => $httpStatus,
+            'headers' => $responseHeaders,
+            'body_raw' => mb_substr((string) $responseBody, 0, 1000),
+        ];
 
-            return [
-                'success' => $success,
-                'message' => $json['reason'] ?? $json['detail'] ?? ($success ? 'Terkirim' : 'Gagal tanpa keterangan dari Fonnte'),
-                'raw' => $json,
-                'debug' => $debug,
-            ];
-        } catch (\Throwable $e) {
-            Log::error('Fonnte WhatsApp send failed: ' . $e->getMessage());
+        if ($responseBody === false) {
+            $error = error_get_last()['message'] ?? 'Tidak diketahui';
+            Log::error('Fonnte stream request failed: ' . $error);
 
             return [
                 'success' => false,
-                'message' => 'Gagal mengirim WhatsApp: ' . $e->getMessage(),
+                'message' => 'Gagal koneksi ke Fonnte (stream): ' . $error,
                 'raw' => [],
-                'debug' => ['exception' => $e->getMessage()],
+                'debug' => $debug,
             ];
         }
+
+        $json = json_decode($responseBody, true);
+
+        if ($json === null) {
+            Log::warning('Fonnte response bukan JSON valid (stream)', $debug);
+
+            return [
+                'success' => false,
+                'message' => 'Respons dari Fonnte tidak dikenali (bukan JSON). Cek log untuk detail body mentah.',
+                'raw' => [],
+                'debug' => $debug,
+            ];
+        }
+
+        $success = filter_var($json['status'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        return [
+            'success' => $success,
+            'message' => $json['reason'] ?? $json['detail'] ?? ($success ? 'Terkirim' : 'Gagal tanpa keterangan dari Fonnte'),
+            'raw' => $json,
+            'debug' => $debug,
+        ];
+    }
+
+    protected function buildMultipartBody(string $boundary, array $fields): string
+    {
+        $body = '';
+
+        foreach ($fields as $name => $value) {
+            $body .= "--{$boundary}\r\n";
+            $body .= "Content-Disposition: form-data; name=\"{$name}\"\r\n\r\n";
+            $body .= "{$value}\r\n";
+        }
+
+        $body .= "--{$boundary}--\r\n";
+
+        return $body;
     }
 }
