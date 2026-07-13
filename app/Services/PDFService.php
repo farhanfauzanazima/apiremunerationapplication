@@ -29,6 +29,21 @@ class PDFService
             'signedBy' => $signedBy,
         ]);
 
-        return $pdf->setPaper('a4', 'portrait');
+        return $pdf->setPaper('a3', 'landscape');
+    }
+
+    public function renderFinanceReport(array $data)
+    {
+        $pdf = Pdf::loadView('pdf.finance-report', [
+            'branch' => $data['branch'],
+            'period' => $data['period'],
+            'tetap' => $data['tetap'],
+            'partime' => $data['partime'],
+            'totals' => $data['totals'],
+            'bulanIndo' => $this->bulanIndo,
+            'logoPath' => config('company.logo_path'),
+        ]);
+
+        return $pdf->setPaper('a4', 'landscape');
     }
 }

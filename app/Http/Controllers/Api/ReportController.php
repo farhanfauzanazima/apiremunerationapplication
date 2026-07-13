@@ -7,6 +7,8 @@ use App\Models\Employee;
 use App\Models\PayrollPeriod;
 use App\Models\SalarySlipPartime;
 use App\Models\SalarySlipTetap;
+use App\Services\FinanceReportService;
+use App\Services\PDFService;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
@@ -90,5 +92,79 @@ class ReportController extends Controller
                 'slips' => $slips,
             ],
         ]);
+    }
+
+    public function financeSummary(Request $request, FinanceReportService $financeReportService)
+    {
+        $request->validate([
+            'payroll_period_id' => ['required', 'exists:payroll_periods,id'],
+            'branch_id' => ['required', 'exists:branches,id'],
+        ]);
+
+        $branchId = (int) $request->input('branch_id');
+
+        if (!$request->user()->canAccessBranch($branchId)) {
+            abort(403, 'Anda tidak memiliki akses ke cabang ini');
+        }
+
+        $branch = \App\Models\Branch::findOrFail($branchId);
+        $period = \App\Models\PayrollPeriod::findOrFail($request->input('payroll_period_id'));
+
+        $data = $financeReportService->build($branch, $period);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Laporan keuangan berhasil diambil',
+            'data' => $data,
+        ]);
+    }
+
+    public function financeSummaryPreviewPdf(Request $request, FinanceReportService $financeReportService, PDFService $pdfService)
+    {
+        [$branch, $period, $data] = $this->resolveFinanceReportRequest($request, $financeReportService);
+
+        $pdf = $pdfService->renderFinanceReport($data);
+
+        return $pdf->stream($this->financeReportFilename($branch, $period));
+    }
+
+    public function financeSummaryDownloadPdf(Request $request, FinanceReportService $financeReportService, PDFService $pdfService)
+    {
+        [$branch, $period, $data] = $this->resolveFinanceReportRequest($request, $financeReportService);
+
+        $pdf = $pdfService->renderFinanceReport($data);
+
+        return $pdf->download($this->financeReportFilename($branch, $period));
+    }
+
+    protected function resolveFinanceReportRequest(Request $request, FinanceReportService $financeReportService): array
+    {
+        $request->validate([
+            'payroll_period_id' => ['required', 'exists:payroll_periods,id'],
+            'branch_id' => ['required', 'exists:branches,id'],
+        ]);
+
+        $branchId = (int) $request->input('branch_id');
+
+        if (!$request->user()->canAccessBranch($branchId)) {
+            abort(403, 'Anda tidak memiliki akses ke cabang ini');
+        }
+
+        $branch = \App\Models\Branch::findOrFail($branchId);
+        $period = \App\Models\PayrollPeriod::findOrFail($request->input('payroll_period_id'));
+
+        return [$branch, $period, $financeReportService->build($branch, $period)];
+    }
+
+    protected function financeReportFilename($branch, $period): string
+    {
+        $bulanIndo = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+        ];
+        $bulan = $bulanIndo[$period->month] ?? $period->month;
+
+        return "Laporan HR untuk Keuangan Periode {$bulan} {$period->year} - {$branch->name}.pdf";
     }
 }

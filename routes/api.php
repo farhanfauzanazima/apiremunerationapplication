@@ -115,6 +115,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('salary-summary', [ReportController::class, 'salarySummary']);
         Route::get('statistics', [ReportController::class, 'statistics']);
         Route::get('employee/{employeeId}', [ReportController::class, 'employeeReport']);
+        Route::get('finance-summary', [ReportController::class, 'financeSummary']);
+        Route::get('finance-summary/preview-pdf', [ReportController::class, 'financeSummaryPreviewPdf']);
+        Route::get('finance-summary/download-pdf', [ReportController::class, 'financeSummaryDownloadPdf']);
     });
 
     // ---------- Activity Log — Owner only ----------
