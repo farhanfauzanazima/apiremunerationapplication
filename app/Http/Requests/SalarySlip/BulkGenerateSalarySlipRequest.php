@@ -24,9 +24,14 @@ class BulkGenerateSalarySlipRequest extends FormRequest
             'tetap.*.izin' => ['nullable', 'integer', 'min:0'],
             'tetap.*.sakit' => ['nullable', 'integer', 'min:0'],
             'tetap.*.off' => ['nullable', 'integer', 'min:0'],
-            'tetap.*.lembur' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.hari_shift' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.hari_full' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.hari_parsial' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.nominal_shift' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.nominal_full' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.nominal_parsial' => ['nullable', 'integer', 'min:0'],
+            'tetap.*.jam_lembur' => ['nullable', 'integer', 'min:0', 'max:5'],
             'tetap.*.telat' => ['nullable', 'integer', 'min:0'],
-            'tetap.*.harian' => ['nullable', 'integer', 'min:0'],
             'tetap.*.tunjangan_jabatan' => ['nullable', 'integer', 'min:0'],
             'tetap.*.tunjangan_bpjs' => ['nullable', 'integer', 'min:0'],
             'tetap.*.bonus_omset' => ['nullable', 'integer', 'min:0'],
@@ -45,5 +50,22 @@ class BulkGenerateSalarySlipRequest extends FormRequest
             'partime.*.tunjangan' => ['nullable', 'integer', 'min:0'],
             'partime.*.bonus' => ['nullable', 'integer', 'min:0'],
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            foreach ($this->input('tetap', []) as $idx => $row) {
+                $masuk = (int) ($row['hari_shift'] ?? 0) + (int) ($row['hari_full'] ?? 0) + (int) ($row['hari_parsial'] ?? 0);
+                $telat = (int) ($row['telat'] ?? 0);
+
+                if ($telat > $masuk) {
+                    $validator->errors()->add(
+                        "tetap.$idx.telat",
+                        "Telat tidak boleh melebihi jumlah hari masuk ({$masuk} hari) untuk baris karyawan ke-" . ($idx + 1)
+                    );
+                }
+            }
+        });
     }
 }

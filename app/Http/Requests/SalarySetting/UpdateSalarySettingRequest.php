@@ -22,6 +22,9 @@ class UpdateSalarySettingRequest extends FormRequest
             'rate_full' => ['required', 'integer', 'min:0'],
             'rate_shift' => ['required', 'integer', 'min:0'],
             'rate_reguler' => ['required', 'integer', 'min:0'],
+            'lembur_1_2_jam' => ['required', 'integer', 'min:0'],
+            'lembur_3_4_jam' => ['required', 'integer', 'min:0'],
+            'lembur_5_jam' => ['required', 'integer', 'min:0'],
         ];
     }
 }

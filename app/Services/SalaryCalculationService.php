@@ -16,18 +16,45 @@ class SalaryCalculationService
      */
     public function calculateTetap(Employee $employee, array $input, SalarySetting $setting, PayrollPeriod $period): array
     {
+        // Field kehadiran lama (hari_kerja, alfa, izin, sakit, off) sekarang HANYA
+        // catatan/informasi tambahan — tidak lagi memengaruhi kalkulasi apapun.
         $hariKerja = (int) ($input['hari_kerja'] ?? 0);
         $alfa = (int) ($input['alfa'] ?? 0);
         $izin = (int) ($input['izin'] ?? 0);
         $sakit = (int) ($input['sakit'] ?? 0);
         $off = (int) ($input['off'] ?? 0);
-        $masuk = max(0, $hariKerja - $alfa - $izin - $sakit - $off);
 
-        $lembur = (int) ($input['lembur'] ?? 0);
-        $telat = (int) ($input['telat'] ?? 0);
-        $harian = (int) ($input['harian'] ?? 0);
+        // Gaji Pokok sekarang dari kombinasi Shift + Full + Parsial (nominal per-slip, manual)
+        $hariShift = (int) ($input['hari_shift'] ?? 0);
+        $hariFull = (int) ($input['hari_full'] ?? 0);
+        $hariParsial = (int) ($input['hari_parsial'] ?? 0);
 
-        $gajiPokok = $harian * $masuk;
+        $nominalShift = (int) ($input['nominal_shift'] ?? 0);
+        $nominalFull = (int) ($input['nominal_full'] ?? 0);
+        $nominalParsial = (int) ($input['nominal_parsial'] ?? 0);
+
+        $totalShift = $hariShift * $nominalShift;
+        $totalFull = $hariFull * $nominalFull;
+        $totalParsial = $hariParsial * $nominalParsial;
+
+        $gajiPokok = $totalShift + $totalFull + $totalParsial;
+
+        // Masuk sekarang = total hari Shift + Full + Parsial (bukan lagi hari_kerja - alfa - izin - sakit - off)
+        $masuk = $hariShift + $hariFull + $hariParsial;
+
+        // Telat tidak boleh melebihi Masuk — validasi utama ada di Form Request,
+        // ini jaring pengaman kedua di level service.
+        $telat = min((int) ($input['telat'] ?? 0), $masuk);
+
+        // Lembur sekarang berbasis tabel tier flat dari Kategorikal, maksimal 5 jam.
+        $jamLembur = min((int) ($input['jam_lembur'] ?? 0), 5);
+        $totalLembur = match (true) {
+            $jamLembur >= 5 => $setting->lembur_5_jam,
+            $jamLembur >= 3 => $setting->lembur_3_4_jam,
+            $jamLembur >= 1 => $setting->lembur_1_2_jam,
+            default => 0,
+        };
+
         $tunjanganTransport = $setting->transport_tetap * $masuk;
         $tunjanganJabatan = (int) ($input['tunjangan_jabatan'] ?? 0);
         $tunjanganBpjs = (int) ($input['tunjangan_bpjs'] ?? 0);
@@ -38,14 +65,17 @@ class SalaryCalculationService
             ? $setting->tenure_bonus_amount
             : 0;
 
-        $bonusDisiplin = $setting->disiplin_bonus_tetap * $masuk;
+        // Bonus disiplin sekarang dikurangi jumlah hari telat
+        $bonusDisiplin = max(0, $setting->disiplin_bonus_tetap * ($masuk - $telat));
+
         $bonusOmset = (int) ($input['bonus_omset'] ?? 0);
         $bonusKinerja = (int) ($input['bonus_kinerja'] ?? 0);
 
         $cashbond = (int) ($input['cashbond'] ?? 0);
         $tabungan = (int) ($input['tabungan'] ?? 0);
 
-        $thp = ($lembur + $gajiPokok + $tunjanganTransport + $tunjanganJabatan + $tunjanganBpjs
+        // Rumus THP & Total Gaji TIDAK BERUBAH — hanya sumber gaji_pokok & lembur yang beda cara hitungnya
+        $thp = ($totalLembur + $gajiPokok + $tunjanganTransport + $tunjanganJabatan + $tunjanganBpjs
                 + $tunjanganMasaKerja + $bonusDisiplin + $bonusOmset + $bonusKinerja)
                - ($cashbond + $tabungan);
 
@@ -58,10 +88,19 @@ class SalaryCalculationService
             'izin' => $izin,
             'sakit' => $sakit,
             'off' => $off,
+            'hari_shift' => $hariShift,
+            'hari_full' => $hariFull,
+            'hari_parsial' => $hariParsial,
+            'nominal_shift' => $nominalShift,
+            'nominal_full' => $nominalFull,
+            'nominal_parsial' => $nominalParsial,
+            'total_shift' => $totalShift,
+            'total_full' => $totalFull,
+            'total_parsial' => $totalParsial,
             'masuk' => $masuk,
-            'lembur' => $lembur,
+            'jam_lembur' => $jamLembur,
+            'lembur' => $totalLembur,
             'telat' => $telat,
-            'harian' => $harian,
             'gaji_pokok' => $gajiPokok,
             'tunjangan_transport' => $tunjanganTransport,
             'tunjangan_jabatan' => $tunjanganJabatan,

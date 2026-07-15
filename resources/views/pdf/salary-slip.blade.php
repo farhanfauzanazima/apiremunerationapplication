@@ -3,12 +3,18 @@
 <head>
     <meta charset="utf-8">
     <style>
+        /* ============================================================
+           TEMPLATE: SLIP GAJI INDIVIDUAL (satu karyawan per PDF)
+           UKURAN KERTAS: A4 PORTRAIT — diatur di app/Services/PDFService.php,
+           method renderSalarySlip(), baris setPaper('a4', 'portrait').
+           JANGAN ubah ukuran kertas dari file blade ini — ubah di PDFService.php.
+           ============================================================ */
         @page { margin: 30px 40px; }
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 12px; color: #222; }
-        .header { text-align: center; margin-bottom: 6px; }
-        .header img { height: 130px; /* naikkan angka ini jika logo masih kurang besar, turunkan jika terlalu besar/kepenuhan */
+        .header { text-align: center; margin-bottom: -20px; } /* Jarak teks dan logo */
+        .header img { height: 170px; /* naikkan angka ini jika logo masih kurang besar, turunkan jika terlalu besar/kepenuhan */
             margin-bottom: 4px; }
-        .company-address { text-align: center; font-size: 11px; line-height: 1.5; }
+        .company-address { text-align: center; font-size: 13px; line-height: 1.5; }
         .divider { border-top: 3px double #333; margin: 10px 0 14px; }
         .title { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 2px; }
         .subtitle { text-align: center; font-weight: bold; font-size: 13px; margin-bottom: 18px; }
@@ -76,7 +82,10 @@
 
     @if($type === 'tetap')
     <table class="rincian">
-        <tr><td class="label">Gaji Pokok</td><td class="sep">:</td><td>Rp</td><td class="value">{{ number_format($slip->gaji_pokok,0,',','.') }}</td></tr>
+        <tr><td class="label">Total Shift</td><td class="sep">:</td><td>Rp</td><td class="value">{{ number_format($slip->total_shift,0,',','.') }}</td></tr>
+        <tr><td class="label">Total Full</td><td class="sep">:</td><td>Rp</td><td class="value">{{ number_format($slip->total_full,0,',','.') }}</td></tr>
+        <tr><td class="label">Total Parsial</td><td class="sep">:</td><td>Rp</td><td class="value">{{ number_format($slip->total_parsial,0,',','.') }}</td></tr>
+        <tr><td class="label"><strong>Gaji Pokok</strong></td><td class="sep">:</td><td>Rp</td><td class="value"><strong>{{ number_format($slip->gaji_pokok,0,',','.') }}</strong></td></tr>
         <tr><td class="label">Tunjangan Jabatan</td><td class="sep">:</td><td>Rp</td><td class="value">{{ number_format($slip->tunjangan_jabatan,0,',','.') }}</td></tr>
         <tr><td class="label">Tunjangan Transport</td><td class="sep">:</td><td>Rp</td><td class="value">{{ number_format($slip->tunjangan_transport,0,',','.') }}</td></tr>
         <tr><td class="label">Tunjangan Masa Kerja</td><td class="sep">:</td><td>Rp</td><td class="value">{{ number_format($slip->tunjangan_masa_kerja,0,',','.') }}</td></tr>

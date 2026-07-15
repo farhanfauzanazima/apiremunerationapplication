@@ -19,6 +19,9 @@ class SalarySettingSeeder extends Seeder
             'rate_full' => 60000,
             'rate_shift' => 40000,
             'rate_reguler' => 25000,
+            'lembur_1_2_jam' => 20000,
+            'lembur_3_4_jam' => 35000,
+            'lembur_5_jam' => 40000,
         ]);
     }
 }
