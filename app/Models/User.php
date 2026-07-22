@@ -13,7 +13,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'password', 'phone',
-        'role', 'has_all_branch_access', 'must_change_password',
+        'role', 'is_super_hr', 'has_all_branch_access', 'must_change_password',
     ];
 
     protected $hidden = [
@@ -22,6 +22,7 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
+        'is_super_hr' => 'boolean',
         'has_all_branch_access' => 'boolean',
         'must_change_password' => 'boolean',
     ];
@@ -35,6 +36,20 @@ class User extends Authenticatable
     public function isOwner(): bool
     {
         return $this->role === 'owner';
+    }
+
+    public function isSuperHr(): bool
+    {
+        return $this->role === 'hr' && $this->is_super_hr === true;
+    }
+
+    /**
+     * Owner dan Super HR sama-sama boleh mengelola HR biasa, Cabang, dan fitur
+     * lain di luar Activity Log & pembuatan/penghapusan Super HR itu sendiri.
+     */
+    public function isElevated(): bool
+    {
+        return $this->isOwner() || $this->isSuperHr();
     }
 
     public function isHead(): bool

@@ -34,8 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
     Route::match(['put', 'post'], '/auth/change-password', [AuthController::class, 'changePassword']);
 
-    // ---------- Manajemen HR — Owner only ----------
-    Route::middleware('role:owner')->prefix('hr-management')->group(function () {
+    // ---------- Manajemen HR — Owner & Super HR ----------
+    Route::middleware('elevated')->prefix('hr-management')->group(function () {
         Route::get('/', [HrManagementController::class, 'index']);
         Route::post('/', [HrManagementController::class, 'store']);
         Route::put('/{user}', [HrManagementController::class, 'update']);
@@ -43,12 +43,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{user}', [HrManagementController::class, 'destroy']);
     });
 
-    // ---------- Cabang — baca: owner & hr (discope di controller), tulis: owner only ----------
+    // ---------- Cabang — baca: owner & hr, tulis: Owner & Super HR ----------
     Route::middleware('role:owner,hr')->group(function () {
         Route::get('/branches', [BranchController::class, 'index']);
         Route::get('/branches/{branch}', [BranchController::class, 'show']);
     });
-    Route::middleware('role:owner')->group(function () {
+    Route::middleware('elevated')->group(function () {
         Route::post('/branches', [BranchController::class, 'store']);
         Route::put('/branches/{branch}', [BranchController::class, 'update']);
         Route::delete('/branches/{branch}', [BranchController::class, 'destroy']);

@@ -15,9 +15,10 @@ class UpdateHrRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'has_all_branch_access' => ['required', 'boolean'],
+            'has_all_branch_access' => ['sometimes', 'boolean'],
             'branch_ids' => ['required_if:has_all_branch_access,false', 'array'],
             'branch_ids.*' => ['exists:branches,id'],
+            'is_super_hr' => ['sometimes', 'boolean'],
         ];
     }
 

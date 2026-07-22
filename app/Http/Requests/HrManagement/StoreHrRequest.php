@@ -15,7 +15,8 @@ class StoreHrRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'has_all_branch_access' => ['required', 'boolean'],
+            'type' => ['nullable', 'in:hr,super_hr'],
+            'has_all_branch_access' => ['required_unless:type,super_hr', 'boolean'],
             'branch_ids' => ['required_if:has_all_branch_access,false', 'array'],
             'branch_ids.*' => ['exists:branches,id'],
         ];

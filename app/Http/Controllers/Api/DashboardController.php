@@ -19,7 +19,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $allowed = $user->allowedBranchIds(); // null = akses semua cabang
-        $includeTrend = $user->isOwner(); // grafik tren HANYA dikirim untuk Owner
+        $includeTrend = $user->isOwner() || $user->isSuperHr(); // grafik tren untuk Owner & Super HR
 
         $data = $this->dashboardService->build($allowed, $includeTrend, $this->salaryTrendService);
 
