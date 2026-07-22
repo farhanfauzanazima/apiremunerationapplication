@@ -118,6 +118,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('finance-summary', [ReportController::class, 'financeSummary']);
         Route::get('finance-summary/preview-pdf', [ReportController::class, 'financeSummaryPreviewPdf']);
         Route::get('finance-summary/download-pdf', [ReportController::class, 'financeSummaryDownloadPdf']);
+        Route::get('finance-summary/download-excel', [ReportController::class, 'financeSummaryDownloadExcel']);
     });
 
     // ---------- Activity Log — Owner only ----------

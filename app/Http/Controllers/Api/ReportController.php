@@ -167,4 +167,22 @@ class ReportController extends Controller
 
         return "Laporan HR untuk Keuangan Periode {$bulan} {$period->year} - {$branch->name}.pdf";
     }
+
+    public function financeSummaryDownloadExcel(Request $request, FinanceReportService $financeReportService)
+    {
+        [$branch, $period, $data] = $this->resolveFinanceReportRequest($request, $financeReportService);
+
+        $bulanIndo = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+        ];
+        $bulan = $bulanIndo[$period->month] ?? $period->month;
+        $filename = "Laporan HR untuk Keuangan Periode {$bulan} {$period->year} - {$branch->name}.xlsx";
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\FinanceReportExport($data),
+            $filename
+        );
+    }
 }
